@@ -1,0 +1,48 @@
+16.10.2024
+Приветствую, дорогой ревьюер!
+
+В проекте реализованы два сервиса: "dds_service" и "cdm_service". Дополнительно был разработан сервис "stg_service" в рамках прохождения спринта. 
+
+Цель проекта — сбор данных из различных источников о транзакционной активности пользователей и их доставка в хранилище данных. 
+
+Краткое описание сервисов:
+1. stg_service: Этот сервис собирает и обогащает данные, которые затем передает на вход "dds_service" и передаёт в топик "stg-service-orders".
+2. dds_service: Получает выходные обогащенные данные от "stg_service", загружает их в DWH слой DDS и передает данные в топик Kafka "dds-service-orders".
+3. cdm_service: Аналогично предыдущему, получает данные из Kafka и загружает их в DWH в слой CDM.
+
+Каждый из этих сервисов работает в своем Docker-контейнере. Образы были загружены в "de-registry" в репозитории и развернуты в Kubernetes.
+
+В ходе выполнения проекта возникала одна и та же проблема, а именно ошибка в PostgreSQL, выглядит она так:
+{
+application_name: "unknown - 84.252.147.254",
+backend_type: "client backend",
+command_tag: "idle in transaction",
+connection_from: "localhost:33366",
+context: "",
+database_name: "sprint9dwh",
+detail: "",
+error_severity: "ERROR",
+hint: "",
+hostname: "rc1b-p400orx3336ft63b.mdb.yandexcloud.net",
+internal_query: "",
+internal_query_pos: 0,
+leader_pid: 0,
+location: "",
+message: "syntax error at or near "sent_dttm"",
+process_id: 154082,
+query: " INSERT INTO stg.order_events (object_id, object_type, sent_dttm, payload) VALUES ('object_id', 'object_type', 'sent_dttm', 'payload') ON CONFLICT (object_id) DO UPDATE SET object_type = EXCLUDED.object_type sent_dttm = EXCLUDED.sent_dttm payload = EXCLUDED.payload ",
+query_id: 0,
+query_pos: 361,
+session_id: "670fd4cd.259e2",
+session_line_num: 1,
+session_start_time: "2024-10-16T17:59:25+03:00",
+sql_state_code: 42601,
+transaction_id: 0,
+user_name: "db_user",
+virtual_transaction_id: "5/48133"
+}
+
+Видно что в конце запроса не хватает запятых и я думаю проблема возникала из за них. Интересно то, что в коде эти запятые есть. 
+А самое интересное: что бы избавиться от этой ошибки приходилось удалять все сервисы и заново их загружать и иногда по несколько раз, пока логи в PostgreSQL не перестанут окрашиваться в красный.
+В общем, намучался я с этой проблемой :-) 
+Хотелось бы разобраться с этим, но дедлайн поджимает...
